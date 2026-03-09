@@ -1,0 +1,23 @@
+{
+  "name": "DriverSentinel | IoT Safety Protocol",
+  "short_name": "DriverSentinel",
+  "description": "Sistema inteligente de monitoreo biométrico y de seguridad vial para conductores.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1120",
+  "theme_color": "#06B6D4",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

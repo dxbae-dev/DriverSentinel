@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Tipografía base */
+  --font-sans: 'Roboto', sans-serif;
+  --font-display: 'Poppins', sans-serif;
+  
+  /* Paleta de colores DriverSentinel */
+  --color-ds-bg: #0F172A;       /* Slate 900 - Fondo principal oscuro */
+  --color-ds-card: #1E293B;     /* Slate 800 - Fondo de tarjetas */
+  --color-ds-primary: #06B6D4;  /* Cyan - Color tecnológico/botones */
+  --color-ds-alert: #EF4444;    /* Rojo - Alertas de sueño/cabeceo */
+  --color-ds-safe: #10B981;     /* Esmeralda - Todo en orden */
+  --color-ds-text: #F8FAFC;     /* Slate 50 - Texto claro */
+  --color-ds-muted: #94A3B8;    /* Slate 400 - Texto secundario */
+}
+
+body {
+  background-color: var(--color-ds-bg);
+  color: var(--color-ds-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Títulos con Poppins (para números de sensores y encabezados) */
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Scrollbar Personalizado (Reciclado de tu código porque está genial) */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ds-card);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ds-primary);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  /* Usamos una sombra interior gigante con el color de fondo de tu input (#0B1120) */
+  -webkit-box-shadow: 0 0 0 30px #0B1120 inset !important;
+  /* Forzamos el color del texto para que no se ponga negro */
+  -webkit-text-fill-color: var(--color-ds-text) !important;
+  /* Aseguramos que el cursor (caret) siga siendo visible */
+  caret-color: white !important;
+  /* Borde sutil para que empate con el diseño cuando se autocompleta */
+  border: 1px solid var(--color-ds-primary) !important;
+  /* Quitamos cualquier transición rara del navegador */
+  transition: background-color 5000s ease-in-out 0s;
+}

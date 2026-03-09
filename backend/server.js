@@ -30,9 +30,11 @@ app.get('/', (req, res) => {
   res.send('DriverSentinel API 1.0 Running...');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor en puerto ${PORT}`);
+  });
+}
 
 export default app;

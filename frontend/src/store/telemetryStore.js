@@ -1,33 +1,85 @@
 import { create } from 'zustand';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = 'http://localhost:5000';
 
 export const useTelemetryStore = create((set, get) => ({
-  // Fases: 'loading', 'linking' (Falta ID), 'calibrating' (60s), 'active' (Monitoreo)
   dashboardStage: 'loading', 
-  
-  // Datos de Calibración
-  calibrationTimeLeft: 60,
+  calibrationTimeLeft: 60, //
   baselineBPM: null,
   isCalibrating: false,
+  
+  // --- NUEVOS ESTADOS DE TELEMETRÍA REAL ---
+  currentData: { bpm: 0, pitch: 0, isSleeping: false },
+  isAlertActive: false,
+  socket: null,
 
-  // Inicializar el estado del dashboard
   initDashboard: (user) => {
     if (!user?.settings?.deviceId) {
       set({ dashboardStage: 'linking' });
     } else {
-      // Si ya tiene ID, pasa a calibración para establecer la línea base
       set({ dashboardStage: 'calibrating' });
     }
   },
 
-  // Cambiar de fase manualmente (útil tras vincular el ESP32)
   setDashboardStage: (stage) => set({ dashboardStage: stage }),
 
-  // Iniciar los 60 segundos de calibración
+  // --- LÓGICA DE ALERTAS ---
+  checkAlerts: (data) => {
+    const { baselineBPM, dashboardStage, isAlertActive } = get();
+    if (dashboardStage !== 'active' || !baselineBPM || isAlertActive) return;
+
+    const threshold = baselineBPM * 0.85;
+    
+    // Condición 1: Caída de BPM
+    const isBpmCritical = data.bpm > 0 && data.bpm < threshold;
+    
+    // Condición 2: Cabeceo detectado por Giroscopio (Ej: más de 15 grados o menos de -15)
+    // Ajusta estos valores según las lecturas reales de tu MPU6050
+    const isPitchCritical = parseFloat(data.pitch) > 15 || parseFloat(data.pitch) < -15;
+
+    if (isBpmCritical || isPitchCritical) {
+      let cause = isBpmCritical ? 'CAÍDA DE BPM' : 'CABECEO DETECTADO';
+      if (isBpmCritical && isPitchCritical) cause = 'MÚLTIPLES SENSORES';
+
+      set({ 
+        isAlertActive: true,
+        alertCause: cause // Guardamos la causa para mostrarla
+      });
+    }
+  },
+
+  // --- NUEVA FUNCIÓN PARA APAGAR LA ALARMA ---
+  dismissAlert: () => {
+    set({ isAlertActive: false, alertCause: null });
+  },
+
+  // --- CONEXIÓN DE SOCKETS ---
+  connectSocket: () => {
+    if (get().socket) return;
+    const socket = io(SOCKET_URL);
+
+    socket.on('telemetryUpdate', (data) => {
+      set({ currentData: data });
+      get().checkAlerts(data); // Verificamos alertas en cada pulso
+    });
+
+    set({ socket });
+  },
+
+  disconnectSocket: () => {
+    const socket = get().socket;
+    if (socket) {
+      socket.disconnect();
+      set({ socket: null });
+    }
+  },
+
   startCalibration: () => {
     const state = get();
     if (state.isCalibrating) return;
 
-    set({ isCalibrating: true, calibrationTimeLeft: 60 });
+    set({ isCalibrating: true, calibrationTimeLeft: 60 }); //
 
     const timer = setInterval(() => {
       const timeLeft = get().calibrationTimeLeft;
@@ -36,13 +88,18 @@ export const useTelemetryStore = create((set, get) => ({
         set({ calibrationTimeLeft: timeLeft - 1 });
       } else {
         clearInterval(timer);
-        // Terminó el tiempo: Establecemos línea base (simulada por ahora) y pasamos a activo
+        // Aquí se definiría el rango normal
         set({ 
-          baselineBPM: 75, // Esto vendrá del ESP32 real después
+          baselineBPM: 75, 
           isCalibrating: false, 
           dashboardStage: 'active' 
         });
       }
     }, 1000);
+  },
+  skipCalibration: () => {
+    // Ponemos el tiempo en 1 segundo para que el setInterval 
+    // lo detecte en su siguiente ciclo y haga la transición limpia
+    set({ calibrationTimeLeft: 1 }); 
   }
 }));

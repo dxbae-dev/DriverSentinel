@@ -95,6 +95,41 @@ export const useAuthStore = create(
           throw error;
         }
       },
+      espState: "linking", // 'connected', 'disconnected', 'linking'
+
+      // Acción para vincular el dispositivo
+      linkDevice: async (deviceId) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.put("/users/link-device", { deviceId });
+          set((state) => ({
+            user: {
+              ...state.user,
+              settings: response.data.settings,
+            },
+            espState: "connected", // Actualizamos la barra superior automáticamente
+            isLoading: false,
+          }));
+          return response.data;
+        } catch (error) {
+          set({
+            error: error.response?.data?.message || "Error al vincular ESP32",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Acción para preguntar cómo está el sensor (se ejecutará al cargar la Navbar)
+      checkDeviceStatus: async () => {
+        try {
+          const response = await api.get("/users/device-status");
+          set({ espState: response.data.status });
+        } catch (error) {
+          console.error("Error comprobando estado del ESP32", error);
+          set({ espState: "disconnected" });
+        }
+      },
 
       clearError: () => set({ error: null }),
     }),

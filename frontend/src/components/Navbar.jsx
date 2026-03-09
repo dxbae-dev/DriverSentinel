@@ -4,7 +4,7 @@ import {
   Activity, Menu, X, ChevronDown, LayoutDashboard, LogOut, 
   Settings, History, Cpu, WifiOff, Loader2, LogIn, UserPlus, ShieldAlert 
 } from "lucide-react";
-import { useAuthStore } from "../store/authStore"; //
+import { useAuthStore } from "../store/authStore";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,13 +14,17 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // --- 🚨 INTEGRACIÓN CON ZUSTAND ---
-  const { user, logout, token } = useAuthStore(); //
+  // --- 🚨 INTEGRACIÓN CON ZUSTAND (ESTADO REAL) ---
+  const { user, logout, espState, checkDeviceStatus } = useAuthStore(); 
 
-  // Simulador de estado del hardware (Pronto vendrá de un WebSocket)
-  const [espState, setEspState] = useState("disconnected"); 
-  
   const userAvatar = `https://api.dicebear.com/9.x/initials/svg?seed=${user?.firstName || 'User'}&backgroundColor=0F172A&textColor=06B6D4`;
+
+  // --- 🔄 VERIFICACIÓN DEL ESP32 AL CARGAR ---
+  useEffect(() => {
+    if (user) {
+      checkDeviceStatus();
+    }
+  }, [user, checkDeviceStatus]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -39,7 +43,7 @@ export function Navbar() {
   }, [location]);
 
   const handleLogout = () => {
-    logout(); //
+    logout(); 
     navigate('/login');
   };
 
@@ -49,7 +53,8 @@ export function Navbar() {
     linking: { bg: "bg-amber-400/70 border-amber-400", text: "text-black", message: "VINCULANDO PROTOCOLO DS-V1...", icon: <Loader2 size={14} className="animate-spin" /> }
   };
 
-  const currentStatus = statusConfig[espState];
+  // Usamos el fallback a 'linking' por si Zustand tarda un milisegundo en cargar
+  const currentStatus = statusConfig[espState] || statusConfig.linking;
 
   return (
     <>

@@ -7,19 +7,26 @@ export function AuthInput({ icon: Icon, type, label, error, ...props }) {
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
 
   return (
-<div className="flex flex-col gap-1.5 w-full">
-      {label && <label className="text-sm font-medium text-ds-muted">{label}</label>}
-      <div className="relative group">
+    <div className="flex flex-col gap-1.5 w-full group">
+      {label && (
+        <label className="text-[10px] uppercase font-black tracking-[0.15em] text-ds-muted ml-1 transition-colors group-focus-within:text-ds-primary">
+          {label}
+        </label>
+      )}
+      <div className="relative">
         {/* Ícono de la izquierda */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-ds-primary transition-colors">
-          <Icon size={18} />
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-ds-primary transition-colors z-10">
+          <Icon size={18} strokeWidth={2.5} />
         </div>
         
         <input
           type={inputType}
           className={`w-full bg-[#0B1120] border ${
-            error ? "border-ds-alert focus:border-ds-alert" : "border-slate-700 focus:border-ds-primary"
-          } rounded-xl py-3 pl-10 pr-10 text-white placeholder:text-slate-600 outline-none transition-all shadow-sm focus:shadow-[0_0_10px_rgba(6,182,212,0.15)]`}
+            error ? "border-ds-alert focus:border-ds-alert" : "border-slate-800 focus:border-ds-primary/50"
+          } rounded-xl py-3.5 pl-11 pr-10 text-sm text-white placeholder:text-slate-600 outline-none transition-all shadow-sm focus:bg-ds-primary/[0.02]
+          ${type === 'date' ? 'scheme-dark' : ''} 
+          /* scheme-dark hace que el picker de fecha sea oscuro en navegadores modernos */
+          `}
           {...props}
         />
 
@@ -28,14 +35,14 @@ export function AuthInput({ icon: Icon, type, label, error, ...props }) {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </div>
       {/* Mensaje de error */}
-      {error && <span className="text-xs text-ds-alert font-medium pl-1">{error}</span>}
+      {error && <span className="text-[10px] text-ds-alert font-bold uppercase tracking-wider pl-1 mt-0.5">{error}</span>}
     </div>
   );
 }

@@ -14,6 +14,21 @@ import Swal from "sweetalert2";
 import { AuthInput } from "../../components/auth/AuthInput";
 import { useAuthStore } from "../../store/authStore";
 
+// Pre-configuramos el Toast global igual que en el Login
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 5000,
+  timerProgressBar: true,
+  background: "#1E293B",
+  color: "#fff",
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+
 export function Register() {
   const [formData, setFormData] = useState({
     email: "",
@@ -26,19 +41,24 @@ export function Register() {
   // Extraemos funciones y estados del store
   const { register, isLoading, error, clearError, user } = useAuthStore();
 
-  // useEffect para Login.jsx y Register.jsx
+  // useEffect central para redirección con Toasts
   useEffect(() => {
     if (user) {
-      // 1. Prioridad: Administrador
       if (user.role === "admin") {
+        Toast.fire({ icon: "success", title: "¡Cuenta creada! Bienvenido Admin." });
         navigate("/admin-panel");
       }
-      // 2. Usuario Normal: Verificar si ya completó su perfil técnico
       else if (user.isProfileComplete) {
-        navigate("/dashboard"); // Aquí verá la telemetría del ESP32
+        Toast.fire({ icon: "success", title: "¡Registro exitoso!" });
+        navigate("/dashboard"); 
       }
-      // 3. Usuario Normal con perfil incompleto
       else {
+        // El escenario normal para un registro nuevo
+        Toast.fire({
+          icon: "info",
+          title: "¡Cuenta Creada!",
+          text: "Solo un paso más: completa tu perfil."
+        });
         navigate("/complete-profile");
       }
     }
@@ -82,17 +102,8 @@ export function Register() {
 
     try {
       // Llamada real al backend para registrar
+      // (Quitamos el Swal gigante de aquí, el useEffect lo manejará limpiamente)
       await register(formData.email, formData.password);
-
-      Swal.fire({
-        icon: "success",
-        title: "¡Cuenta creada!",
-        text: "Serás redirigido para completar tu perfil de conductor.",
-        background: "#1E293B",
-        color: "#fff",
-        confirmButtonColor: "#06B6D4",
-      });
-      // El useEffect se encarga de la redirección al detectar 'user'
     } catch (err) {
       console.error("Fallo el registro", err);
     }
@@ -127,7 +138,7 @@ export function Register() {
 
           {/* Mostrar error del Backend si existe */}
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-ds-alert/10 border border-ds-alert/20 text-ds-alert text-sm text-center font-bold tracking-wide uppercase">
+            <div className="mb-4 p-3 rounded-lg bg-ds-alert/10 border border-ds-alert/20 text-ds-alert text-sm text-center font-bold tracking-wide uppercase animate-in fade-in">
               {error}
             </div>
           )}

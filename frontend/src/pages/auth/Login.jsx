@@ -6,27 +6,48 @@ import Swal from "sweetalert2";
 import { AuthInput } from "../../components/auth/AuthInput";
 import { useAuthStore } from "../../store/authStore";
 
+// Pre-configuramos un Toast global para que se vea moderno y no estorbe
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 5000,
+  timerProgressBar: true,
+  background: "#1E293B",
+  color: "#fff",
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+
 export function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [formErrors, setFormErrors] = useState({});
   const navigate = useNavigate();
 
-  // Extraemos funciones y estados del store de Zustand
   const { login, isLoading, error, clearError, user } = useAuthStore();
 
   useEffect(() => {
     if (user) {
-      // Si es administrador o su perfil ya está completo, va al dashboard
       if (user.isProfileComplete || user.role === 'admin') {
+        Toast.fire({
+          icon: "success",
+          title: "¡Sesión iniciada correctamente!"
+        });
         navigate('/dashboard');
       } else {
-        // Si le faltan datos vitales, lo obligamos a pasar por la configuración
+        // AQUÍ ESTÁ LA MAGIA: El aviso de perfil incompleto
+        Toast.fire({
+          icon: "info",
+          title: "Acción Requerida",
+          text: "Por favor completa tu perfil para continuar."
+        });
         navigate('/complete-profile');
       }
     }
   }, [user, navigate]);
 
-  // Limpiamos errores previos al cargar el componente
   useEffect(() => {
     clearError();
     useAuthStore.setState({ isLoading: false });
@@ -34,10 +55,9 @@ export function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    clearError(); // Limpiamos errores del backend antes de intentar de nuevo
+    clearError(); 
     let newErrors = {};
 
-    // Validaciones del lado del cliente
     if (!formData.email) newErrors.email = "El correo es obligatorio";
     if (!formData.password) newErrors.password = "La contraseña es obligatoria";
 
@@ -49,21 +69,10 @@ export function Login() {
     setFormErrors({});
 
     try {
-      // Ejecutamos la acción de login del store (petición real al backend)
+      // Solo esperamos a que termine el login. 
+      // Las alertas y redirecciones ahora las maneja el useEffect de arriba de forma limpia.
       await login(formData.email, formData.password);
-      
-      // Si el login es exitoso (la promesa se resuelve)
-      Swal.fire({
-        icon: "success",
-        title: "¡Sesión iniciada!",
-        background: "#1E293B",
-        color: "#fff",
-        showConfirmButton: false,
-        timer: 1500
-      });
-      // Nota: El useEffect se encargará de la redirección al detectar el cambio en 'user'
     } catch (err) {
-      // Si hay un error, Zustand actualiza el estado 'error', que se mostrará en la UI
       console.error("Fallo el login", err);
     }
   };
@@ -76,12 +85,10 @@ export function Login() {
         
         <div className="absolute top-0 left-0 w-full h-[500px] bg-ds-primary/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2"></div>
 
-        {/* Botón de volver (siempre arriba) */}
         <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-ds-muted hover:text-white transition-colors w-max relative z-20">
           <ArrowLeft size={16} /> Volver al inicio
         </Link>
 
-        {/* Contenedor del formulario (Centrado verticalmente con my-auto) */}
         <div className="max-w-md w-full mx-auto my-auto py-8">
           <div className="flex flex-col mb-6">
             <div className="w-12 h-12 bg-ds-card border border-white/10 rounded-xl flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
@@ -91,9 +98,8 @@ export function Login() {
             <p className="text-ds-muted text-sm mt-1">Ingresa a tu panel de control y monitoreo</p>
           </div>
 
-          {/* Renderizado del error global del backend */}
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-ds-alert/10 border border-ds-alert/20 text-ds-alert text-sm text-center font-medium">
+            <div className="mb-4 p-3 rounded-xl bg-ds-alert/10 border border-ds-alert/20 text-ds-alert text-sm text-center font-medium animate-in fade-in">
               {error}
             </div>
           )}
@@ -140,7 +146,7 @@ export function Login() {
           </div>
 
           <button 
-            type="button" // Cambiado a button para evitar submit del form
+            type="button" 
             className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-xl transition-all"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">

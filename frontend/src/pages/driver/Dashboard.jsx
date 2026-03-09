@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { useAuthStore } from '../../store/authStore';
 import { useTelemetryStore } from '../../store/telemetryStore';
 import { Loader2 } from 'lucide-react';
@@ -8,16 +10,40 @@ import { DeviceLinker } from '../../components/dashboard/DeviceLinker';
 import { CalibrationPhase } from '../../components/dashboard/CalibrationPhase';
 import { ActiveTelemetry } from '../../components/dashboard/ActiveTelemetry';
 
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 5000,
+  timerProgressBar: true,
+  background: "#1E293B",
+  color: "#fff",
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+
 export function Dashboard() {
   const { user } = useAuthStore();
   const { dashboardStage, initDashboard } = useTelemetryStore();
+  const navigate = useNavigate();
 
   // Al cargar la vista, el store decide si pedir el ID o empezar a calibrar
   useEffect(() => {
     if (user) {
+      if(!user.isProfileComplete) {
+        Toast.fire({
+          icon: "info",
+          title: "Acceso Restringido",
+          text: "Debes completar tu perfil de conductor primero."
+        });
+        navigate('/complete-profile');
+        return;
+      }
       initDashboard(user);
     }
-  }, [user, initDashboard]);
+  }, [user, initDashboard, navigate]);
 
   // Función limpiadora que decide qué componente dibujar
   const renderStage = () => {

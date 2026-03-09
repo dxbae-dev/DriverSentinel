@@ -29,6 +29,7 @@ export function Login() {
   // Limpiamos errores previos al cargar el componente
   useEffect(() => {
     clearError();
+    useAuthStore.setState({ isLoading: false });
   }, [clearError]);
 
   const handleSubmit = async (e) => {

@@ -47,6 +47,7 @@ export function Register() {
   // Limpiamos errores del backend al montar/desmontar
   useEffect(() => {
     clearError();
+    useAuthStore.setState({ isLoading: false });
   }, [clearError]);
 
   const validateForm = () => {

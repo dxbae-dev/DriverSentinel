@@ -1,7 +1,7 @@
 // src/store/authStore.js
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import api from '../config/axios';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import api from "../config/axios";
 
 export const useAuthStore = create(
   persist(
@@ -15,16 +15,16 @@ export const useAuthStore = create(
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.post('/auth/login', { email, password });
-          set({ 
-            user: response.data, 
-            token: response.data.token, 
-            isLoading: false 
+          const response = await api.post("/auth/login", { email, password });
+          set({
+            user: response.data,
+            token: response.data.token,
+            isLoading: false,
           });
         } catch (error) {
-          set({ 
-            error: error.response?.data?.message || 'Error al iniciar sesión', 
-            isLoading: false 
+          set({
+            error: error.response?.data?.message || "Error al iniciar sesión",
+            isLoading: false,
           });
           throw error; // Lanzamos el error para que el componente (UI) lo caché
         }
@@ -34,16 +34,19 @@ export const useAuthStore = create(
       register: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.post('/auth/register', { email, password });
-          set({ 
-            user: response.data, 
-            token: response.data.token, 
-            isLoading: false 
+          const response = await api.post("/auth/register", {
+            email,
+            password,
+          });
+          set({
+            user: response.data,
+            token: response.data.token,
+            isLoading: false,
           });
         } catch (error) {
-          set({ 
-            error: error.response?.data?.message || 'Error al registrar', 
-            isLoading: false 
+          set({
+            error: error.response?.data?.message || "Error al registrar",
+            isLoading: false,
           });
           throw error;
         }
@@ -53,16 +56,16 @@ export const useAuthStore = create(
       googleLogin: async (tokenId) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.post('/auth/google', { tokenId });
-          set({ 
-            user: response.data, 
-            token: response.data.token, 
-            isLoading: false 
+          const response = await api.post("/auth/google", { tokenId });
+          set({
+            user: response.data,
+            token: response.data.token,
+            isLoading: false,
           });
         } catch (error) {
-          set({ 
-            error: error.response?.data?.message || 'Error con Google Auth', 
-            isLoading: false 
+          set({
+            error: error.response?.data?.message || "Error con Google Auth",
+            isLoading: false,
           });
           throw error;
         }
@@ -70,32 +73,40 @@ export const useAuthStore = create(
 
       // Acción: Cerrar Sesión
       logout: () => {
-        set({ user: null, token: null, error: null });
+        set({ user: null, token: null, error: null, isLoading: false });
       },
 
       // Completar Perfil
       updateProfile: async (profileData) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await api.put('/users/profile', profileData);
+          const response = await api.put("/users/profile", profileData);
           // Actualizamos el usuario en el estado global para que isProfileComplete sea true
-          set((state) => ({ 
-            user: { ...state.user, ...response.data }, 
-            isLoading: false 
+          set((state) => ({
+            user: { ...state.user, ...response.data },
+            isLoading: false,
           }));
         } catch (error) {
-          set({ 
-            error: error.response?.data?.message || 'Error al actualizar el perfil', 
-            isLoading: false 
+          set({
+            error:
+              error.response?.data?.message || "Error al actualizar el perfil",
+            isLoading: false,
           });
           throw error;
         }
       },
 
-      clearError: () => set({ error: null })
+      clearError: () => set({ error: null }),
     }),
     {
-      name: 'ds-auth-storage', 
-    }
-  )
+      name: "ds-auth-storage",
+      // Esta parte es la que lee del LocalStorage al cargar la app
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isLoading = false; // Desbloqueo garantizado al cargar/refrescar
+          state.error = null; // Limpiamos errores viejos también
+        }
+      },
+    },
+  ),
 );

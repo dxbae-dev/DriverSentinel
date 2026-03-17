@@ -8,16 +8,15 @@ export const useTelemetryStore = create((set, get) => ({
   calibrationTimeLeft: 60,
   baselineBPM: null,
   isCalibrating: false,
+  calibrationSamples: [], // Nueva lista para promediar el pulso real
   
-  // --- ESTADOS DE TELEMETRÍA ---
   currentData: { bpm: 0, pitch: 0, isSleeping: false },
   isAlertActive: false,
   alertCause: null,
   socket: null,
 
-  // --- ESTADOS DEL MODO DESCANSO ---
   isRestMode: false,
-  restTimeLeft: 0, // Segundos restantes de descanso
+  restTimeLeft: 0,
   restInterval: null,
 
   initDashboard: (user) => {
@@ -30,29 +29,18 @@ export const useTelemetryStore = create((set, get) => ({
 
   setDashboardStage: (stage) => set({ dashboardStage: stage }),
 
-  // --- LÓGICA DE MODO DESCANSO CON TEMPORIZADOR ---
   startRestMode: (minutes) => {
-    // Si ya hay un intervalo, lo limpiamos
     if (get().restInterval) clearInterval(get().restInterval);
-
-    set({ 
-      isRestMode: true, 
-      restTimeLeft: minutes * 60, // Convertimos a segundos
-      isAlertActive: false // Apagamos cualquier alerta activa
-    });
-
+    set({ isRestMode: true, restTimeLeft: minutes * 60, isAlertActive: false });
     const interval = setInterval(() => {
       const timeLeft = get().restTimeLeft;
       if (timeLeft > 0) {
         set({ restTimeLeft: timeLeft - 1 });
       } else {
-        // Se acabó el tiempo
         clearInterval(interval);
         set({ isRestMode: false, restTimeLeft: 0, restInterval: null });
-        // Opcional: Aquí podrías disparar un sonido suave para despertarlo
       }
     }, 1000);
-
     set({ restInterval: interval });
   },
 
@@ -61,38 +49,38 @@ export const useTelemetryStore = create((set, get) => ({
     set({ isRestMode: false, restTimeLeft: 0, restInterval: null });
   },
 
-  // --- LÓGICA DE ALERTAS ---
   checkAlerts: (data) => {
     const { baselineBPM, dashboardStage, isAlertActive, isRestMode } = get();
-    
-    // Filtro maestro: Si está en modo descanso, IGNORAMOS todo
     if (dashboardStage !== 'active' || !baselineBPM || isAlertActive || isRestMode) return;
 
+    // Umbral dinámico: 85% de tu ritmo cardíaco en reposo calibrado
     const threshold = baselineBPM * 0.85;
     
+    // Alerta si el BPM cae o si el ángulo X es mayor a -6.0 (según tu .ino)
     const isBpmCritical = data.bpm > 0 && data.bpm < threshold;
-    const isPitchCritical = parseFloat(data.pitch) > 15 || parseFloat(data.pitch) < -15;
+    const isPitchCritical = parseFloat(data.pitch) > -6.0;
 
     if (isBpmCritical || isPitchCritical) {
-      let cause = isBpmCritical ? 'CAÍDA DE BPM' : 'CABECEO DETECTADO';
-      if (isBpmCritical && isPitchCritical) cause = 'MÚLTIPLES SENSORES';
-
       set({ 
         isAlertActive: true,
-        alertCause: cause 
+        alertCause: isBpmCritical ? 'RITMO CARDÍACO BAJO' : 'INCLINACIÓN CRÍTICA' 
       });
     }
   },
 
-  dismissAlert: () => {
-    set({ isAlertActive: false, alertCause: null });
-  },
+  dismissAlert: () => set({ isAlertActive: false, alertCause: null }),
 
   connectSocket: () => {
     if (get().socket) return;
     const socket = io(SOCKET_URL);
     socket.on('telemetryUpdate', (data) => {
       set({ currentData: data });
+      
+      // Si estamos calibrando, guardamos la muestra para el promedio
+      if (get().isCalibrating && data.bpm > 0) {
+        set((state) => ({ calibrationSamples: [...state.calibrationSamples, data.bpm] }));
+      }
+
       get().checkAlerts(data); 
     });
     set({ socket });
@@ -100,23 +88,27 @@ export const useTelemetryStore = create((set, get) => ({
 
   disconnectSocket: () => {
     const socket = get().socket;
-    if (socket) {
-      socket.disconnect();
-      set({ socket: null });
-    }
+    if (socket) { socket.disconnect(); set({ socket: null }); }
   },
 
   startCalibration: () => {
-    const state = get();
-    if (state.isCalibrating) return;
-    set({ isCalibrating: true, calibrationTimeLeft: 60 }); 
+    if (get().isCalibrating) return;
+    set({ isCalibrating: true, calibrationTimeLeft: 60, calibrationSamples: [] }); 
+    
     const timer = setInterval(() => {
       const timeLeft = get().calibrationTimeLeft;
       if (timeLeft > 1) {
         set({ calibrationTimeLeft: timeLeft - 1 });
       } else {
         clearInterval(timer);
-        set({ baselineBPM: 75, isCalibrating: false, dashboardStage: 'active' });
+        
+        // CALCULAR PROMEDIO REAL DE SAUL
+        const samples = get().calibrationSamples;
+        const average = samples.length > 0 
+          ? Math.round(samples.reduce((a, b) => a + b) / samples.length) 
+          : 75; // Fallback si no hubo lecturas
+
+        set({ baselineBPM: average, isCalibrating: false, dashboardStage: 'active' });
       }
     }, 1000);
   },

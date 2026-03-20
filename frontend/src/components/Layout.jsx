@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
+import { useAuthStore } from "../store/authStore"; // 🚨 Ya podemos usar tu store real
 
 export function Layout({ children }) {
   const location = useLocation();
 
-  // 🚨 MOCK DE USUARIO (Debe ser igual al de tu Navbar)
-  // Cuando tengas tu AuthContext, simplemente usa: const { user } = useAuth();
-  const user = null; 
+  // Traemos el usuario real de tu store
+  const { user } = useAuthStore(); 
 
   // Reset de scroll al cambiar de página
   useEffect(() => {
@@ -19,8 +19,13 @@ export function Layout({ children }) {
     });
   }, [location.pathname]);
 
-  const hideNavigationPaths = ["/login", "/register"];
-  const shouldHideNavigation = hideNavigationPaths.includes(location.pathname);
+  // Lista de rutas base donde queremos ocultar la navegación
+  const hideNavigationPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
+  
+  // SOLUCIÓN: Usamos .some() y .startsWith() para atrapar las rutas dinámicas
+  const shouldHideNavigation = hideNavigationPaths.some(path => 
+    location.pathname.startsWith(path)
+  );
 
   // Cálculo dinámico del padding superior para compensar la altura de la Navbar
   const paddingTop = shouldHideNavigation 

@@ -13,8 +13,8 @@ export function Team() {
       img: "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=Baena"
     },
     {
-      name: "Samuel",
-      role: "Hardware & Sensors",
+      name: "Miguel Velasco Samuel",
+      role: "Hardware & Sensores",
       img: "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=Samy"
     },
     {

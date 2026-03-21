@@ -4,20 +4,44 @@ import dotenv from 'dotenv';
 import http from 'http'; 
 import { Server } from 'socket.io'; 
 import { connectDB } from './src/database.js';
+import { SerialPort } from 'serialport';
+import { ReadlineParser } from '@serialport/parser-readline';
 
 import authRoutes from './src/routes/authRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 
 dotenv.config();
 const app = express();
-
 const server = http.createServer(app);
 
-// Configurar Socket.io
+// --- 1. CONFIGURACIÓN DE SOCKET.IO ---
 const io = new Server(server, {
   cors: {
     origin: "*", 
     methods: ["GET", "POST"]
+  }
+});
+
+// --- 2. CONFIGURACIÓN DEL PUERTO SERIAL Y MOCK MODE ---
+let isMockMode = false;
+
+// Evitamos que crashee apagando el autoOpen
+const arduinoPort = new SerialPort({ 
+  path: 'COM6', 
+  baudRate: 115200, 
+  autoOpen: false 
+}); 
+const parser = new ReadlineParser({ delimiter: '\r\n' });
+
+// Intentamos abrir el puerto manualmente para capturar el error
+arduinoPort.open((err) => {
+  if (err) {
+    console.log(`⚠️ No se encontró el hardware en COM6: ${err.message}`);
+    console.log('🛠️ Iniciando en [MOCK MODE] - Generando telemetría simulada...');
+    isMockMode = true;
+  } else {
+    console.log('✅ Conexión serial establecida en COM6');
+    arduinoPort.pipe(parser);
   }
 });
 
@@ -33,53 +57,103 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
-  res.send('DriverSentinel API 1.0 Running with Sockets...');
+  res.send(`DriverSentinel API 1.0 Running... (Mock Mode: ${isMockMode})`);
 });
 
-// --- 🛰️ LÓGICA DE SOCKETS Y SIMULADOR ESP32 ---
+// --- 🛰️ LÓGICA DE FLUJO DE DATOS (REAL Y SIMULADO) ---
 io.on('connection', (socket) => {
-  console.log('✅ Dispositivo conectado al flujo de datos:', socket.id);
+  console.log('✅ Dashboard conectado:', socket.id);
 
-  // Simulador: Se envian datos falsos cada 2 segundos
-  const telemetryInterval = setInterval(() => {
-    
-    // 20% de probabilidad de que el conductor se quede dormido
-    const isSleeping = Math.random() < 0.20;
-    
-    // Si se duerme, 50% de probabilidad de que baje el pulso
-    const simulatedBPM = isSleeping && Math.random() > 0.5
-      ? Math.floor(Math.random() * (60 - 55 + 1)) + 55 
-      : Math.floor(Math.random() * (85 - 70 + 1)) + 70;
+  let mockInterval;
 
-    // Si se duerme, 50% de probabilidad de que cabecee bruscamente (entre 20 y 30 grados, o -20 y -30)
-    let simulatedPitch;
-    if (isSleeping && Math.random() > 0.5) {
-        const sign = Math.random() > 0.5 ? 1 : -1; // Cabeceo hacia adelante o atrás
-        simulatedPitch = (sign * (Math.random() * (30 - 20) + 20)).toFixed(2);
-    } else {
-        // Manejo normal (postura estable entre -5 y 5 grados)
-        simulatedPitch = (Math.random() * 10 - 5).toFixed(2); 
-    }
+  if (isMockMode) {
+    // ------------------------------------
+    // MODO SIMULADO CON ALERTAS AUTOMÁTICAS
+    // ------------------------------------
+    let secondsCounter = 0;
+    let criticalTicks = 0; // Cuántos segundos durará la alerta
+    let currentAlertMode = 0; // 1 = Pitch, 2 = BPM, 3 = Ambos
 
-    const fakeData = {
-      bpm: simulatedBPM, 
-      pitch: simulatedPitch, 
-      timestamp: new Date().toISOString()
+    mockInterval = setInterval(() => {
+      secondsCounter++;
+      
+      // Valores por defecto (Saludables)
+      let bpm = Math.floor(Math.random() * (85 - 70 + 1)) + 70; 
+      let pitch = parseFloat((Math.random() * 4 - 2).toFixed(2)); 
+
+      // Cada x segundos, disparamos la ventana de crisis
+      if (secondsCounter >= 10) {
+        secondsCounter = 0; // Reiniciamos el reloj
+        criticalTicks = 4;  // Mandamos datos malos por 4 segundos para vencer la tolerancia del frontend
+        currentAlertMode = Math.floor(Math.random() * 3) + 1; // Elegimos al azar qué fallará
+        
+        const alertName = currentAlertMode === 1 ? 'CABECEO' : currentAlertMode === 2 ? 'BPM BAJO' : 'FALLO TOTAL (Ambos)';
+        console.log(`[Mock Mode] 🚨 Simulando anomalía: ${alertName}`);
+      }
+
+      // Si estamos en la ventana de crisis, sobreescribimos los datos saludables con datos peligrosos
+      if (criticalTicks > 0) {
+        criticalTicks--;
+        
+        if (currentAlertMode === 1 || currentAlertMode === 3) {
+          // Simulamos que la cabeza cae hacia adelante (Pitch entre -7.0 y -10.0)
+          pitch = parseFloat((-7.0 - (Math.random() * 3)).toFixed(2)); 
+        }
+        if (currentAlertMode === 2 || currentAlertMode === 3) {
+          // Simulamos pulso muy bajo (BPM entre 45 y 55)
+          bpm = Math.floor(Math.random() * (55 - 45 + 1)) + 45; 
+        }
+      }
+      
+      const mockData = {
+        bpm: bpm, 
+        pitch: pitch, 
+        timestamp: new Date().toISOString()
+      };
+      
+      socket.emit('telemetryUpdate', mockData);
+    }, 1000); // 1 actualización por segundo
+
+  } else {
+    // ------------------------------------
+    // MODO REAL: Escuchamos el ESP32
+    // ------------------------------------
+    const handleSerialData = (data) => {
+      if (data.includes("BPM:")) {
+        try {
+          const partes = data.split(',');
+          const bpmValue = parseFloat(partes[0].split(':')[1]);
+          const angleValue = parseFloat(partes[1].split(':')[1]);
+
+          socket.emit('telemetryUpdate', {
+            bpm: bpmValue, 
+            pitch: angleValue, 
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          console.error("Error procesando datos seriales:", error);
+        }
+      }
     };
-    
-    socket.emit('telemetryUpdate', fakeData);
-  }, 2000);
+
+    parser.on('data', handleSerialData);
+
+    socket.on('disconnect', () => {
+      parser.off('data', handleSerialData);
+    });
+  }
 
   socket.on('disconnect', () => {
-    clearInterval(telemetryInterval);
-    console.log('❌ Conexión de telemetría cerrada');
+    console.log('❌ Sesión de monitoreo cerrada:', socket.id);
+    if (mockInterval) clearInterval(mockInterval);
   });
 });
+
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
-    console.log(`🚀 Servidor y Sockets activos en puerto ${PORT}`);
+    console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
   });
 }
 
-export default server; 
+export default server;

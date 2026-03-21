@@ -76,6 +76,42 @@ export const useAuthStore = create(
         set({ user: null, token: null, error: null, isLoading: false });
       },
 
+      // Añadir dentro de useAuthStore en authStore.js
+
+      requestPasswordReset: async (email) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.post("/auth/forgot-password", { email });
+          set({ isLoading: false });
+          return response.data;
+        } catch (error) {
+          set({
+            error:
+              error.response?.data?.message || "Error al solicitar el cambio",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      resetPassword: async (token, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.put(`/auth/reset-password/${token}`, {
+            password,
+          });
+          set({ isLoading: false });
+          return response.data;
+        } catch (error) {
+          set({
+            error:
+              error.response?.data?.message || "Error al actualizar contraseña",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
       // Completar Perfil
       updateProfile: async (profileData) => {
         set({ isLoading: true, error: null });

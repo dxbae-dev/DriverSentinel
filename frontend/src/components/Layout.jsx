@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { useAuthStore } from "../store/authStore"; // 🚨 Ya podemos usar tu store real
+import { DriverAssistant } from "./dashboard/DriverAssistant";
 
 export function Layout({ children }) {
   const location = useLocation();
@@ -41,6 +42,7 @@ export function Layout({ children }) {
       
       <main className={`flex-grow transition-all duration-300 ${paddingTop} min-h-screen`}>
         {children}
+        <DriverAssistant />
       </main>
       
       {!shouldHideNavigation && <Footer />}

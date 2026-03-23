@@ -9,6 +9,8 @@ import { ReadlineParser } from '@serialport/parser-readline';
 
 import authRoutes from './src/routes/authRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
+import tripRoutes from './src/routes/tripRoutes.js';
+
 
 dotenv.config();
 const app = express();
@@ -55,6 +57,7 @@ connectDB();
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/trips', tripRoutes);
 
 app.get('/', (req, res) => {
   res.send(`DriverSentinel API 1.0 Running... (Mock Mode: ${isMockMode})`);

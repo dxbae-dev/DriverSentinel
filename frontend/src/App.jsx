@@ -8,6 +8,8 @@ import { CompleteProfile } from "./pages/auth/CompleteProfile";
 import { Dashboard } from "./pages/driver/Dashboard";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import { RateTrip } from "./pages/driver/RateTrip";
+import { AllRatings } from "./pages/AllRatings";
 
 function App() {
   return (
@@ -19,8 +21,10 @@ function App() {
           <Route path="/register" element={<Register />} /> 
           <Route path="/complete-profile" element={<CompleteProfile />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/rate-trip" element={<RateTrip />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/opiniones" element={<AllRatings />} />
         </Routes>
       </Layout>
     </BrowserRouter>

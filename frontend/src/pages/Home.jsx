@@ -3,6 +3,7 @@ import { Features } from "../components/home/Features";
 import { Stats } from "../components/home/Stats";
 import { Team } from "../components/home/Team";
 import { Contact } from "../components/home/Contact";
+import { Testimonials } from "../components/home/Testimonials";
 
 export function Home() {
   return (
@@ -10,6 +11,7 @@ export function Home() {
       <Hero />
       <Features />
       <Stats />
+      <Testimonials />
       <Team />
       <Contact />
     </div>

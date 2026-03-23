@@ -18,8 +18,8 @@ export function Team() {
       img: "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=Samy"
     },
     {
-      name: "Daniela ",
-      role: "Frontend Designer",
+      name: "Daniela Vazquez Hernandez",
+      role: "Diseñadora Frontend",
       img: "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=Dany"
     }
   ];
